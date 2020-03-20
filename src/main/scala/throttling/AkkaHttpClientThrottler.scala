@@ -18,7 +18,7 @@ class AkkaHttpClientThrottler(override val throttler: Throttler)
         case ThrottlingResult.NotFiltered =>
           HttpResponse(StatusCodes.OK)
         case ThrottlingResult.FilteredOut(retryInterval) =>
-          HttpResponse(StatusCodes.TooManyRequests, entity = s"Try again in ${retryInterval.toMinutes} minutes")
+          HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
       }
   }
 
