@@ -17,7 +17,7 @@ object Main extends Logging with App {
   val maxPermitsConf: Int = conf.getInt("maxPermits")
   val duration: Duration = conf.getDuration("rateLimiterDuration")
 
-  val rateLimiter =  SimpleRateLimiter(maxPermitsConf, duration.toScala)
+  val rateLimiter = new SimpleRateLimiter(maxPermitsConf, duration.toScala)
   val akkaHttpClientThrottler = new AkkaHttpClientThrottler(rateLimiter)
 
   val hostName: String = "localhost"

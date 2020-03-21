@@ -2,26 +2,23 @@ package throttling
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 
-import akka.actor.{ActorSystem, Scheduler}
+import akka.actor.ActorSystem
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Deadline, Duration, FiniteDuration}
 
 
-case class SimpleRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration) extends GenericRateLimiter with Logging with TypedCloneable[SimpleRateLimiter] {
-  val actorSystem: ActorSystem = ActorSystem("RateLimiter")
-  val scheduler: Scheduler = actorSystem.scheduler
-  implicit val executor: ExecutionContextExecutor = actorSystem.dispatcher
+class SimpleRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration)(implicit system: ActorSystem, ec: ExecutionContext) extends GenericRateLimiter with Logging {
   val counter: AtomicInteger = new AtomicInteger(0)
   val time: AtomicReference[Deadline] = new AtomicReference(Deadline.now)
-  val runningScheduler = scheduler.scheduleAtFixedRate(Duration.Zero, duration)(() => {
+  val runningScheduler = system.scheduler.scheduleAtFixedRate(Duration.Zero, duration)(() => {
     time.set(duration.fromNow)
     counter.set(0)
   })
 
 
   override def tryAcquire: Boolean = {
-    if (counter.incrementAndGet < maxPermits) {
+    if (counter.incrementAndGet() < maxPermits + 1) {
       true
     }
     else false
@@ -29,6 +26,6 @@ case class SimpleRateLimiter(override val maxPermits: Int, override val duration
 
   override def retryInterval: FiniteDuration = time.get().timeLeft
 
-  override def copyRateLimiter: GenericRateLimiter = this.clone()
+  override def copyRateLimiter: GenericRateLimiter = new SimpleRateLimiter(maxPermits, duration)
 }
 

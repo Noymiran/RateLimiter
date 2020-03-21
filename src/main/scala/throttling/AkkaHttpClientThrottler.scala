@@ -14,9 +14,9 @@ import scala.jdk.CollectionConverters._
 
 class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
                              (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Logging with HttpClient[HttpRequest, HttpResponse] with Throttler {
-  private val usersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = new ConcurrentHashMap[Key, GenericRateLimiter]().asScala
+  val usersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = new ConcurrentHashMap[Key, GenericRateLimiter]().asScala
 
-  override def shouldThrottle(key: Key): Option[ThrottlingResult] = {
+  override def shouldThrottle(key: Key): Option[ThrottlingResult] = synchronized {
     usersRateLimiters.get(key).map {
       rateLimiter =>
         if (rateLimiter.tryAcquire) ThrottlingResult.NotFiltered
@@ -28,17 +28,18 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
   override def requestHandler: HttpRequest => HttpResponse = {
     case r: HttpRequest =>
       r.discardEntityBytes()
-      log.info(r.toString())
       val maybeHttpResponse = IpUtils.getIpFromRequest(r).map(
         ip => {
           val key = HttpKey(ip)
-          if (usersRateLimiters.get(key).isEmpty)
-            usersRateLimiters += ((key, genericRateLimiter.copyRateLimiter))
+          usersRateLimiters.putIfAbsent(key, genericRateLimiter.copyRateLimiter)
+          log.info(usersRateLimiters.toString())
           key
         }).flatMap(shouldThrottle(_).map {
         case ThrottlingResult.NotFiltered =>
+          log.info(r.toString() + "-----" + StatusCodes.OK)
           HttpResponse(StatusCodes.OK)
         case ThrottlingResult.FilteredOut(retryInterval) =>
+          log.info(r.toString() + "-----" + StatusCodes.TooManyRequests)
           HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
       })
       maybeHttpResponse.getOrElse(HttpResponse(StatusCodes.Unauthorized))
@@ -51,7 +52,8 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
   def shutDown(serverBiding: Future[ServerBinding]): Unit = {
     serverBiding
       .flatMap(_.unbind())
-      .onComplete(_ => system.terminate())
+      .onComplete(_ =>
+        system.terminate())
   }
 }
 

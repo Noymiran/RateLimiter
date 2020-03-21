@@ -16,7 +16,7 @@ class GuavaRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with Condu
 
   before {
     maxPermits = 1
-    testedRateLimiter = GuavaRateLimiter(maxPermits, duration)
+    testedRateLimiter = new GuavaRateLimiter(maxPermits, duration)
   }
 
   describe("GuavaRateLimiter Tests") {
@@ -27,7 +27,7 @@ class GuavaRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with Condu
 
     it("retryInterval: 1 minute") {
       maxPermits = 1
-      testedRateLimiter = GuavaRateLimiter(maxPermits, duration)
+      testedRateLimiter = new GuavaRateLimiter(maxPermits, duration)
       Thread.sleep(6000)
       testedRateLimiter.retryInterval.toMinutes should be(1)
     }
