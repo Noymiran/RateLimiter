@@ -12,4 +12,7 @@ case class GuavaRateLimiter(override val maxPermits: Int, override val duration:
 
   override def retryInterval: FiniteDuration = duration.fromNow.timeLeft
 
+  override def copyRateLimiter: GenericRateLimiter = this.copy(maxPermits, duration)
+
+
 }

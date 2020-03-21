@@ -2,7 +2,7 @@ package throttling
 
 import scala.concurrent.duration.FiniteDuration
 
-trait ThrottlingResult
+sealed trait ThrottlingResult
 
 
 object ThrottlingResult {

@@ -23,12 +23,14 @@ case class SimpleRateLimiter(override val maxPermits: Int, override val duration
 
   override def tryAcquire: Boolean = {
     if (counter.get() < maxPermits) {
-      counter.incrementAndGet()
+      println(counter.incrementAndGet())
       true
     }
     else false
   }
 
   override def retryInterval: FiniteDuration = time.get().timeLeft
+
+  override def copyRateLimiter: GenericRateLimiter =this.copy(maxPermits, duration)
 }
 

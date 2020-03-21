@@ -14,11 +14,11 @@ object Main extends Logging with App {
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   val conf = ConfigFactory.load()
-  val mexPermitsConf: Int = conf.getInt("maxPermits")
+  val maxPermitsConf: Int = conf.getInt("maxPermits")
   val duration: Duration = conf.getDuration("rateLimiterDuration")
 
-  val throttler = new ThrottlerService(SimpleRateLimiter(mexPermitsConf, duration.toScala))
-  val akkaHttpClientThrottler = new AkkaHttpClientThrottler(throttler)
+  val rateLimiter = SimpleRateLimiter(maxPermitsConf, duration.toScala)
+  val akkaHttpClientThrottler = new AkkaHttpClientThrottler(rateLimiter)
 
   val hostName: String = "localhost"
   val portNum: Int = 8080

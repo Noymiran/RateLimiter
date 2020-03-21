@@ -6,4 +6,6 @@ trait GenericRateLimiter {
   def maxPermits:Int
   def tryAcquire:Boolean
   def retryInterval:FiniteDuration
+  def copyRateLimiter:GenericRateLimiter
+
 }
