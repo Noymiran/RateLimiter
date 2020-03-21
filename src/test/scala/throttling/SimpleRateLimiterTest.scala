@@ -47,7 +47,6 @@ class SimpleRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with Cond
       it(s"serial requests: could not acquire the maxPermits request $i") {
         for (_ <- 1 to maxPermits) {
           testedRateLimiter.tryAcquire should be(true)
-
         }
         testedRateLimiter.tryAcquire should be(false)
       }

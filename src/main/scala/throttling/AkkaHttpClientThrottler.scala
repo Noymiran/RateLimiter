@@ -36,10 +36,8 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
           key
         }).flatMap(shouldThrottle(_).map {
         case ThrottlingResult.NotFiltered =>
-          log.info(r.toString() + "-----" + StatusCodes.OK)
           HttpResponse(StatusCodes.OK)
         case ThrottlingResult.FilteredOut(retryInterval) =>
-          log.info(r.toString() + "-----" + StatusCodes.TooManyRequests)
           HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
       })
       val response = maybeHttpResponse.getOrElse(HttpResponse(StatusCodes.Unauthorized))
