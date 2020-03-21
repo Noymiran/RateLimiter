@@ -11,7 +11,7 @@ import scala.concurrent.duration.{Deadline, Duration, FiniteDuration}
 class SimpleRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration)(implicit system: ActorSystem, ec: ExecutionContext) extends GenericRateLimiter with Logging {
   val counter: AtomicInteger = new AtomicInteger(0)
   val time: AtomicReference[Deadline] = new AtomicReference(Deadline.now)
-  val runningScheduler = system.scheduler.scheduleAtFixedRate(Duration.Zero, duration)(() => {
+  lazy val runningScheduler = system.scheduler.scheduleAtFixedRate(Duration.Zero, duration)(() => {
     time.set(duration.fromNow)
     counter.set(0)
   })

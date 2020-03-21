@@ -34,35 +34,35 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
     val key = HttpKey(ip)
     val httpRequest = HttpRequest(uri = "testRequest", headers = Seq(headerIp(ip)))
 
-        it("requestHandler should return statusCode= 200") {
-          when(simpleRateLimiter.tryAcquire) thenReturn true
-          val response = testedHttpClientThrottler.requestHandler(httpRequest)
-          response.status should be(StatusCodes.OK)
-        }
+    it("requestHandler should return statusCode= 200") {
+      when(simpleRateLimiter.tryAcquire) thenReturn true
+      val response = testedHttpClientThrottler.requestHandler(httpRequest)
+      response.status should be(StatusCodes.OK)
+    }
 
-        it("requestHandler should return statusCode= 429") {
-          when(simpleRateLimiter.tryAcquire) thenReturn false
-          when(simpleRateLimiter.retryInterval) thenReturn (retryInterval)
-          val response = testedHttpClientThrottler.requestHandler(httpRequest)
-          response.status should be(StatusCodes.TooManyRequests)
-        }
+    it("requestHandler should return statusCode= 429") {
+      when(simpleRateLimiter.tryAcquire) thenReturn false
+      when(simpleRateLimiter.retryInterval) thenReturn (retryInterval)
+      val response = testedHttpClientThrottler.requestHandler(httpRequest)
+      response.status should be(StatusCodes.TooManyRequests)
+    }
 
-        it("request without Ip: requestHandler should return statusCode= 401") {
-          val httpRequest = HttpRequest(uri = "testRequest")
-          val response = testedHttpClientThrottler.requestHandler(httpRequest)
-          response.status should be(StatusCodes.Unauthorized)
-        }
+    it("request without Ip: requestHandler should return statusCode= 401") {
+      val httpRequest = HttpRequest(uri = "testRequest")
+      val response = testedHttpClientThrottler.requestHandler(httpRequest)
+      response.status should be(StatusCodes.Unauthorized)
+    }
 
-        it("shouldThrottle: FilteredOut") {
-          when(simpleRateLimiter.tryAcquire) thenReturn false
-          when(simpleRateLimiter.retryInterval) thenReturn retryInterval
-          testedHttpClientThrottler.shouldThrottle(key) should be(Some(ThrottlingResult.FilteredOut(retryInterval)))
-        }
+    it("shouldThrottle: FilteredOut") {
+      when(simpleRateLimiter.tryAcquire) thenReturn false
+      when(simpleRateLimiter.retryInterval) thenReturn retryInterval
+      testedHttpClientThrottler.shouldThrottle(key) should be(Some(ThrottlingResult.FilteredOut(retryInterval)))
+    }
 
-        it("shouldThrottle: NotFiltered") {
-          when(simpleRateLimiter.tryAcquire) thenReturn true
-          testedHttpClientThrottler.shouldThrottle(key) should be(Some(ThrottlingResult.NotFiltered))
-        }
+    it("shouldThrottle: NotFiltered") {
+      when(simpleRateLimiter.tryAcquire) thenReturn true
+      testedHttpClientThrottler.shouldThrottle(key) should be(Some(ThrottlingResult.NotFiltered))
+    }
     Utils.forall { i =>
       it(s"Test 2 users $i") {
         val duration = 1 hour

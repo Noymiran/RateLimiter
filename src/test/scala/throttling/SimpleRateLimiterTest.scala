@@ -53,11 +53,11 @@ class SimpleRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with Cond
       }
     }
 
-      it(s"retryInterval: 1 minute") {
-        maxPermits = 1
-        testedRateLimiter = new SimpleRateLimiter(maxPermits, duration)
-        Thread.sleep(6000)
-        testedRateLimiter.retryInterval.toMinutes should be(1)
-      }
+    it(s"retryInterval: 1 minute") {
+      maxPermits = 1
+      testedRateLimiter = new SimpleRateLimiter(maxPermits, duration)
+      Thread.sleep(6000)
+      testedRateLimiter.retryInterval.toMinutes should be(1)
+    }
   }
 }
