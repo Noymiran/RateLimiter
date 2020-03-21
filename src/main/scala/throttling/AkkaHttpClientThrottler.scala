@@ -16,14 +16,11 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
                              (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Logging with HttpClient[HttpRequest, HttpResponse] with Throttler {
   val usersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = new ConcurrentHashMap[Key, GenericRateLimiter]().asScala
 
-  override def shouldThrottle(key: Key): Option[ThrottlingResult] = synchronized {
-    usersRateLimiters.get(key).map {
-      rateLimiter =>
-        if (rateLimiter.tryAcquire) ThrottlingResult.NotFiltered
-        else
-          ThrottlingResult.FilteredOut(rateLimiter.retryInterval)
-    }
-  }
+  override def shouldThrottle(key: Key): Option[ThrottlingResult] = usersRateLimiters.get(key).map(rateLimiter => {
+    if (rateLimiter.tryAcquire) ThrottlingResult.NotFiltered
+    else
+      ThrottlingResult.FilteredOut(rateLimiter.retryInterval)
+  })
 
   override def requestHandler: HttpRequest => Future[HttpResponse] = {
     case r: HttpRequest =>
@@ -32,13 +29,14 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
         ip => {
           val key = HttpKey(ip)
           usersRateLimiters.putIfAbsent(key, genericRateLimiter.copyRateLimiter)
-          log.info(usersRateLimiters.toString())
           key
-        }).flatMap(shouldThrottle(_).map {
-        case ThrottlingResult.NotFiltered =>
-          HttpResponse(StatusCodes.OK)
-        case ThrottlingResult.FilteredOut(retryInterval) =>
-          HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
+        }).flatMap(httpKey => {
+        shouldThrottle(httpKey).map {
+          case ThrottlingResult.NotFiltered =>
+            HttpResponse(StatusCodes.OK)
+          case ThrottlingResult.FilteredOut(retryInterval) =>
+            HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
+        }
       })
       val response = maybeHttpResponse.getOrElse(HttpResponse(StatusCodes.Unauthorized))
       val futureResponse = Future.successful(response)
