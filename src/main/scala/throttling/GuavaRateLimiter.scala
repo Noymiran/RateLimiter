@@ -5,14 +5,12 @@ import com.revinate.guava.util.concurrent.RateLimiter
 import scala.concurrent.duration.FiniteDuration
 import scala.language.postfixOps
 
-case class GuavaRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration) extends GenericRateLimiter {
+case class GuavaRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration) extends GenericRateLimiter with TypedCloneable[GuavaRateLimiter] {
   val rateLimiter: RateLimiter = RateLimiter.create(maxPermits.toDouble / duration.toSeconds)
 
   override def tryAcquire: Boolean = rateLimiter.tryAcquire
 
   override def retryInterval: FiniteDuration = duration.fromNow.timeLeft
 
-  override def copyRateLimiter: GenericRateLimiter = GuavaRateLimiter(maxPermits, duration)
-
-
-}
+  override def copyRateLimiter: GenericRateLimiter = this.clone()
+ }

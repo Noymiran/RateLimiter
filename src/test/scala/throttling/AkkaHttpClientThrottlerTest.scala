@@ -67,7 +67,7 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
     it("Test 2 users") {
       val duration = 1 hour
       val maxPermits = 1
-      val simpleRateLimiterNew: SimpleRateLimiter = SimpleRateLimiter(maxPermits, duration)
+      val simpleRateLimiterNew: SimpleRateLimiter =  SimpleRateLimiter(maxPermits, duration)
       val testedHttpClientThrottlerNew = new AkkaHttpClientThrottler(simpleRateLimiterNew)
 
       val ip1: String = randomIp

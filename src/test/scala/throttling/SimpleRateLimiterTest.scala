@@ -18,7 +18,7 @@ class SimpleRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with Cond
 NotFiltered
   before {
     maxPermits = Random.between(1, 10) * 2
-    testedRateLimiter = SimpleRateLimiter(maxPermits, duration)
+    testedRateLimiter =  SimpleRateLimiter(maxPermits, duration)
   }
 
   describe("SimpleRateLimiter Tests") {

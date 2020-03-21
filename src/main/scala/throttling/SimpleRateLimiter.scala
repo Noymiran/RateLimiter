@@ -8,25 +8,20 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.{Deadline, Duration, FiniteDuration}
 
 
-case class SimpleRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration) extends GenericRateLimiter with Logging {
+case class SimpleRateLimiter(override val maxPermits: Int, override val duration: FiniteDuration) extends GenericRateLimiter with Logging with TypedCloneable[SimpleRateLimiter] {
   val actorSystem: ActorSystem = ActorSystem("RateLimiter")
   val scheduler: Scheduler = actorSystem.scheduler
   implicit val executor: ExecutionContextExecutor = actorSystem.dispatcher
   val counter: AtomicInteger = new AtomicInteger(0)
   val time: AtomicReference[Deadline] = new AtomicReference(Deadline.now)
-
-
-  scheduler.scheduleAtFixedRate(Duration.Zero, duration)(() => {
+  val runningScheduler = scheduler.scheduleAtFixedRate(Duration.Zero, duration)(() => {
     time.set(duration.fromNow)
     counter.set(0)
   })
 
 
-  override def tryAcquire: Boolean = synchronized{
-    log.info("Enter try acquire with counter:" + counter.get() + "\ntime:" + System.currentTimeMillis())
-    if (counter.get() < maxPermits) {
-      counter.incrementAndGet()
-      log.info("Update counter to:" + counter.get() + "\ntime:" + System.currentTimeMillis())
+  override def tryAcquire: Boolean = {
+    if (counter.incrementAndGet < maxPermits) {
       true
     }
     else false
@@ -34,6 +29,6 @@ case class SimpleRateLimiter(override val maxPermits: Int, override val duration
 
   override def retryInterval: FiniteDuration = time.get().timeLeft
 
-  override def copyRateLimiter: GenericRateLimiter = SimpleRateLimiter(maxPermits, duration)
+  override def copyRateLimiter: GenericRateLimiter = this.clone()
 }
 

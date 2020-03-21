@@ -12,5 +12,5 @@ trait GenericRateLimiter {
   def retryInterval: FiniteDuration
 
   def copyRateLimiter: GenericRateLimiter
-
 }
+
