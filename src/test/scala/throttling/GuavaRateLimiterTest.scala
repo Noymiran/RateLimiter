@@ -9,14 +9,13 @@ import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
 class GuavaRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with ConductorMethods with Matchers {
-  var maxPermits: Int = _
-  val duration = 2 minute
+  val maxPermits: Int = 1
+  val duration = 1 minute
   var testedRateLimiter: GuavaRateLimiter = _
 
 
   before {
-    maxPermits = 1
-    testedRateLimiter = new GuavaRateLimiter(maxPermits, duration)
+    testedRateLimiter = GuavaRateLimiter(maxPermits, duration)
   }
 
   describe("GuavaRateLimiter Tests") {
@@ -26,10 +25,8 @@ class GuavaRateLimiterTest extends AnyFunSpecLike with BeforeAndAfter with Condu
     }
 
     it("retryInterval: 1 minute") {
-      maxPermits = 1
-      testedRateLimiter = new GuavaRateLimiter(maxPermits, duration)
-      Thread.sleep(6000)
-      testedRateLimiter.retryInterval.toMinutes should be(1)
+      testedRateLimiter.tryAcquire should be(true)
+      testedRateLimiter.retryInterval.toSeconds should be(59)
     }
   }
 

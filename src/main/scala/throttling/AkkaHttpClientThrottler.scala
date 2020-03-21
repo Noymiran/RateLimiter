@@ -14,7 +14,7 @@ import scala.jdk.CollectionConverters._
 
 class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
                              (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Logging with HttpClient[HttpRequest, HttpResponse] with Throttler {
-  val usersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = new ConcurrentHashMap[Key, GenericRateLimiter]().asScala
+  private val usersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = new ConcurrentHashMap[Key, GenericRateLimiter]().asScala
 
   override def shouldThrottle(key: Key): Option[ThrottlingResult] = usersRateLimiters.get(key).map(rateLimiter => {
     if (rateLimiter.tryAcquire) ThrottlingResult.NotFiltered
@@ -22,27 +22,37 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
       ThrottlingResult.FilteredOut(rateLimiter.retryInterval)
   })
 
+  private def updateIfKeyDefined(r: HttpRequest): Option[HttpKey] = {
+    for {
+      ip <- IpUtils.getIpFromRequest(r)
+      key = HttpKey(ip)
+    } yield {
+      usersRateLimiters.putIfAbsent(key, genericRateLimiter.copyRateLimiter)
+      key
+    }
+  }
+
+  private def generateResponse(key: _root_.throttling.HttpKey) = shouldThrottle(key) match {
+    case Some(ThrottlingResult.NotFiltered) =>
+      HttpResponse(StatusCodes.OK)
+    case Some(ThrottlingResult.FilteredOut(retryInterval)) =>
+      HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
+    case None =>
+      HttpResponse(StatusCodes.InternalServerError)
+  }
+
   override def requestHandler: HttpRequest => Future[HttpResponse] = {
     case r: HttpRequest =>
       r.discardEntityBytes()
-      val maybeHttpResponse = IpUtils.getIpFromRequest(r).map(
-        ip => {
-          val key = HttpKey(ip)
-          usersRateLimiters.putIfAbsent(key, genericRateLimiter.copyRateLimiter)
-          key
-        }).flatMap(httpKey => {
-        shouldThrottle(httpKey).map {
-          case ThrottlingResult.NotFiltered =>
-            HttpResponse(StatusCodes.OK)
-          case ThrottlingResult.FilteredOut(retryInterval) =>
-            HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
-        }
-      })
-      val response = maybeHttpResponse.getOrElse(HttpResponse(StatusCodes.Unauthorized))
+      val response = updateIfKeyDefined(r) match {
+        case Some(key) =>
+          generateResponse(key)
+        case None =>
+          HttpResponse(StatusCodes.Unauthorized)
+      }
       val futureResponse = Future.successful(response)
       futureResponse
   }
-
 
   def serverBidingRequests(host: String, port: Int): Future[ServerBinding] =
     Http().bindAndHandleAsync(requestHandler, host, port)
@@ -53,5 +63,7 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
       .onComplete(_ =>
         system.terminate())
   }
+
 }
+
 

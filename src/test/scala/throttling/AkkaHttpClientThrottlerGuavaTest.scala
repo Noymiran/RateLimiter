@@ -5,29 +5,34 @@ import java.net.InetAddress
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.`X-Forwarded-For`
 import akka.http.scaladsl.model.{HttpRequest, RemoteAddress, StatusCodes}
+import org.mockito.internal.util.reflection.FieldSetter
 import org.mockito.scalatest.MockitoSugar
-import org.scalatest.concurrent.ConductorMethods
+import org.scalatest.BeforeAndAfter
 import org.scalatest.funspec.AnyFunSpecLike
 import org.scalatest.matchers.should.Matchers
 
+import scala.collection.concurrent
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.language.postfixOps
 import scala.util.Random
 
 
-class AkkaHttpClientThrottlerGuavaTest extends AnyFunSpecLike with ConductorMethods with Matchers with MockitoSugar {
+class AkkaHttpClientThrottlerGuavaTest extends AnyFunSpecLike with BeforeAndAfter with Matchers with MockitoSugar {
   implicit val system = ActorSystem()
   implicit val executionContext = system.dispatcher
 
   val retryInterval: FiniteDuration = 1 minute
-
-  var guavaRateLimiter: GuavaRateLimiter = mock[GuavaRateLimiter]
-  when(guavaRateLimiter.copyRateLimiter) thenReturn (guavaRateLimiter)
+  val guavaRateLimiter: GuavaRateLimiter = mock[GuavaRateLimiter]
   val testedHttpClientThrottler = new AkkaHttpClientThrottler(guavaRateLimiter)
+  val testUsersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = mock[concurrent.Map[Key, GenericRateLimiter]]
 
   def randomIp: String = "100.0.0." + Random.nextInt(255)
 
   def headerIp(ip: String): `X-Forwarded-For` = `X-Forwarded-For`(RemoteAddress(InetAddress.getByName(ip)))
+
+  before {
+    when(guavaRateLimiter.copyRateLimiter) thenReturn guavaRateLimiter
+  }
 
   describe("AkkaHttpClientThrottler Tests") {
     val ip: String = "100.0.0.1"
@@ -53,6 +58,15 @@ class AkkaHttpClientThrottlerGuavaTest extends AnyFunSpecLike with ConductorMeth
       response.map(_.status should be(StatusCodes.Unauthorized))
     }
 
+    it("ip received but not found in map should return statusCode= 500") {
+      val testedHttpClientThrottlerNew = new AkkaHttpClientThrottler(guavaRateLimiter)
+      FieldSetter.setField(testedHttpClientThrottlerNew, testedHttpClientThrottlerNew.getClass.getDeclaredField("usersRateLimiters"), testUsersRateLimiters)
+      when(testUsersRateLimiters.get(key)).thenReturn(None)
+      val response = testedHttpClientThrottlerNew.requestHandler(httpRequest)
+      response.map(_.status should be(StatusCodes.InternalServerError))
+    }
+
+
     it("shouldThrottle: FilteredOut") {
       when(guavaRateLimiter.tryAcquire) thenReturn false
       when(guavaRateLimiter.retryInterval) thenReturn retryInterval
@@ -67,7 +81,7 @@ class AkkaHttpClientThrottlerGuavaTest extends AnyFunSpecLike with ConductorMeth
       it(s"Test 2 users $i") {
         val duration = 30 seconds
         val maxPermits = 1
-        val guavaRateLimiterNew: GuavaRateLimiter = new GuavaRateLimiter(maxPermits, duration)
+        val guavaRateLimiterNew: GuavaRateLimiter = GuavaRateLimiter(maxPermits, duration)
         val testedHttpClientThrottlerNew = new AkkaHttpClientThrottler(guavaRateLimiterNew)
 
         val ip1: String = "100.0.0.2"

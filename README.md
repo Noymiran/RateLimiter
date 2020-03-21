@@ -1,7 +1,9 @@
 # RateLimiter
-The purpose of this project is to create a rate-limiting module that stops a particular requester from making too many http requests within a particular period of time.
+The purpose of this project is to create a rate-limiting module that stops a particular requester from making too many HTTP requests within a particular period of time.
 
 I defined a requester by his unique IP. If there wasn't an IP in the request header, the response will be Unauthorized (status code 401)
+
+If a request with a certain IP doesn’t appear in the internal map of the throttler (although it supposes to be added before )the response will be InternalServerError (status code 500)
 
 In this project, I implemented two rate limiters.
 1. A wrapper to Guava - open-source written by Google.
