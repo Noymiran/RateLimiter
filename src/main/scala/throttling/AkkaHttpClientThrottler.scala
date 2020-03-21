@@ -25,7 +25,7 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
     }
   }
 
-  override def requestHandler: HttpRequest => HttpResponse = {
+  override def requestHandler: HttpRequest => Future[HttpResponse] = {
     case r: HttpRequest =>
       r.discardEntityBytes()
       val maybeHttpResponse = IpUtils.getIpFromRequest(r).map(
@@ -42,12 +42,14 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
           log.info(r.toString() + "-----" + StatusCodes.TooManyRequests)
           HttpResponse(StatusCodes.TooManyRequests, entity = s"Rate limit exceeded. Try again in ${retryInterval.toSeconds} seconds")
       })
-      maybeHttpResponse.getOrElse(HttpResponse(StatusCodes.Unauthorized))
+      val response = maybeHttpResponse.getOrElse(HttpResponse(StatusCodes.Unauthorized))
+      val futureResponse = Future.successful(response)
+      futureResponse
   }
 
 
   def serverBidingRequests(host: String, port: Int): Future[ServerBinding] =
-    Http().bindAndHandleSync(requestHandler, host, port)
+    Http().bindAndHandleAsync(requestHandler, host, port)
 
   def shutDown(serverBiding: Future[ServerBinding]): Unit = {
     serverBiding

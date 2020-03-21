@@ -37,20 +37,20 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
     it("requestHandler should return statusCode= 200") {
       when(simpleRateLimiter.tryAcquire) thenReturn true
       val response = testedHttpClientThrottler.requestHandler(httpRequest)
-      response.status should be(StatusCodes.OK)
+      response.map(_.status should be(StatusCodes.OK))
     }
 
     it("requestHandler should return statusCode= 429") {
       when(simpleRateLimiter.tryAcquire) thenReturn false
       when(simpleRateLimiter.retryInterval) thenReturn (retryInterval)
       val response = testedHttpClientThrottler.requestHandler(httpRequest)
-      response.status should be(StatusCodes.TooManyRequests)
+      response.map(_.status should be(StatusCodes.TooManyRequests))
     }
 
     it("request without Ip: requestHandler should return statusCode= 401") {
       val httpRequest = HttpRequest(uri = "testRequest")
       val response = testedHttpClientThrottler.requestHandler(httpRequest)
-      response.status should be(StatusCodes.Unauthorized)
+      response.map(_.status should be(StatusCodes.Unauthorized))
     }
 
     it("shouldThrottle: FilteredOut") {
@@ -74,19 +74,19 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
         val httpRequest1 = HttpRequest(uri = "testRequest", headers = Seq(headerIp(ip1)))
 
         val response1User1 = testedHttpClientThrottlerNew.requestHandler(httpRequest1)
-        response1User1.status should be(StatusCodes.OK)
+        response1User1.map(_.status should be(StatusCodes.OK))
 
         val response2User1 = testedHttpClientThrottlerNew.requestHandler(httpRequest1)
-        response2User1.status should be(StatusCodes.TooManyRequests)
+        response2User1.map(_.status should be(StatusCodes.TooManyRequests))
 
         val ip2: String = "100.0.0.3"
         val httpRequest2 = HttpRequest(uri = "testRequest", headers = Seq(headerIp(ip2)))
 
         val response1User2 = testedHttpClientThrottlerNew.requestHandler(httpRequest2)
-        response1User2.status should be(StatusCodes.OK)
+        response1User2.map(_.status should be(StatusCodes.OK))
 
         val response2User2 = testedHttpClientThrottlerNew.requestHandler(httpRequest2)
-        response2User2.status should be(StatusCodes.TooManyRequests)
+        response2User2.map(_.status should be(StatusCodes.TooManyRequests))
       }
     }
   }
