@@ -31,6 +31,7 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
 
   describe("AkkaHttpClientThrottler Tests") {
     val ip: String = randomIp
+    val key=HttpKey(ip)
     val httpRequest = HttpRequest(uri = "testRequest", headers = Seq(headerIp(ip)))
 
     it("requestHandler should return statusCode= 200") {
@@ -55,12 +56,12 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
     it("shouldThrottle: FilteredOut") {
       when(simpleRateLimiter.tryAcquire) thenReturn false
       when(simpleRateLimiter.retryInterval) thenReturn retryInterval
-      testedHttpClientThrottler.shouldThrottle(ip) should be(Some(ThrottlingResult.FilteredOut(retryInterval)))
+      testedHttpClientThrottler.shouldThrottle(key) should be(Some(ThrottlingResult.FilteredOut(retryInterval)))
     }
 
     it("shouldThrottle: NotFiltered") {
       when(simpleRateLimiter.tryAcquire) thenReturn true
-      testedHttpClientThrottler.shouldThrottle(ip) should be(Some(ThrottlingResult.NotFiltered))
+      testedHttpClientThrottler.shouldThrottle(key) should be(Some(ThrottlingResult.NotFiltered))
     }
 
     it("Test 2 users") {

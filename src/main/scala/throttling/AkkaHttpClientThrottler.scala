@@ -13,10 +13,10 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 
 class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
-                             (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Logging with HttpClient[HttpRequest, HttpResponse] with Throttler[String] {
-  private val usersRateLimiters: concurrent.Map[String, GenericRateLimiter] = new ConcurrentHashMap[String, GenericRateLimiter]().asScala
+                             (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Logging with HttpClient[HttpRequest, HttpResponse] with Throttler {
+  private val usersRateLimiters: concurrent.Map[Key, GenericRateLimiter] = new ConcurrentHashMap[Key, GenericRateLimiter]().asScala
 
-  override def shouldThrottle(key: String): Option[ThrottlingResult] =  {
+  override def shouldThrottle(key: Key): Option[ThrottlingResult] = {
     usersRateLimiters.get(key).map {
       rateLimiter =>
         if (rateLimiter.tryAcquire) ThrottlingResult.NotFiltered
@@ -25,15 +25,16 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
     }
   }
 
-  override def requestHandler: HttpRequest => HttpResponse =  {
+  override def requestHandler: HttpRequest => HttpResponse = {
     case r: HttpRequest =>
       r.discardEntityBytes()
       log.info(r.toString())
       val maybeHttpResponse = IpUtils.getIpFromRequest(r).map(
-        ip => synchronized{
-          if (usersRateLimiters.get(ip).isEmpty)
-            usersRateLimiters += ((ip, genericRateLimiter.copyRateLimiter))
-          ip
+        ip => synchronized {
+          val key = HttpKey(ip)
+          if (usersRateLimiters.get(key).isEmpty)
+            usersRateLimiters += ((key, genericRateLimiter.copyRateLimiter))
+          key
         }).flatMap(shouldThrottle(_).map {
         case ThrottlingResult.NotFiltered =>
           HttpResponse(StatusCodes.OK)
