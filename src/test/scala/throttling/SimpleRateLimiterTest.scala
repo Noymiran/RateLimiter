@@ -48,7 +48,7 @@ NotFiltered
 
     it("retryInterval: 1 minute") {
       maxPermits = 1
-      testedRateLimiter = SimpleRateLimiter(maxPermits, duration)
+      testedRateLimiter =  SimpleRateLimiter(maxPermits, duration)
       Thread.sleep(6000)
       testedRateLimiter.retryInterval.toMinutes should be(1)
     }

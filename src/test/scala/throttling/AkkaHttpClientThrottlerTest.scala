@@ -83,6 +83,9 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
 
       val response1User2 = testedHttpClientThrottlerNew.requestHandler(httpRequest2)
       response1User2.status should be(StatusCodes.OK)
+
+      val response2User2 = testedHttpClientThrottlerNew.requestHandler(httpRequest2)
+      response2User2.status should be(StatusCodes.TooManyRequests)
     }
   }
 }
