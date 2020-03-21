@@ -31,7 +31,7 @@ class AkkaHttpClientThrottlerTest extends AnyFunSpecLike with ConductorMethods w
 
   describe("AkkaHttpClientThrottler Tests") {
     val ip: String = randomIp
-    val key=HttpKey(ip)
+    val key = HttpKey(ip)
     val httpRequest = HttpRequest(uri = "testRequest", headers = Seq(headerIp(ip)))
 
     it("requestHandler should return statusCode= 200") {

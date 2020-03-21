@@ -1,6 +1,6 @@
 package throttling
 
 trait Throttler {
-  def shouldThrottle(key:Key): Option[ThrottlingResult]
+  def shouldThrottle(key: Key): Option[ThrottlingResult]
 }
 

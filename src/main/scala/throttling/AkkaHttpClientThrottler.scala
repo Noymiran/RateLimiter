@@ -30,7 +30,7 @@ class AkkaHttpClientThrottler(val genericRateLimiter: GenericRateLimiter)
       r.discardEntityBytes()
       log.info(r.toString())
       val maybeHttpResponse = IpUtils.getIpFromRequest(r).map(
-        ip => synchronized {
+        ip => {
           val key = HttpKey(ip)
           if (usersRateLimiters.get(key).isEmpty)
             usersRateLimiters += ((key, genericRateLimiter.copyRateLimiter))
